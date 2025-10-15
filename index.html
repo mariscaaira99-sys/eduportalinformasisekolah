@@ -1,0 +1,459 @@
+// --- ICONS (Wrapped with React.memo for performance) ---
+const HomeIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>);
+const AnnounceIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M7 12v5h12V8l-5 5-4-4-3 3"></path></svg>);
+const ProfileIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>);
+const AttendanceIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="m9 16 2 2 4-4"></path></svg>);
+const LogoutIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>);
+const AddIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>);
+const CalendarIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>);
+const UsersIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>);
+const ClipboardCheckIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg>);
+
+// --- NEW LOGO ---
+const EduPortalLogo = memo(() => (
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#3B82F6"/>
+        <path d="M2 17l10 5 10-5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M2 12l10 5 10-5" stroke="#60A5FA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M22 7v10" stroke="#1D4ED8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M2 7v10" stroke="#1D4ED8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+));
+
+// --- MOCK DATA ---
+const initialAnnouncements = [
+    { id: 1, title: "Libur Awal Puasa 1446 H", date: "28 Februari 2025", content: "Diberitahukan kepada seluruh siswa bahwa kegiatan belajar mengajar akan diliburkan pada tanggal 1-2 Maret 2025 dalam rangka menyambut awal bulan suci Ramadhan." },
+    { id: 2, title: "Ujian Tengah Semester (UTS) Genap", date: "25 Februari 2025", content: "Pelaksanaan Ujian Tengah Semester Genap akan diadakan mulai tanggal 10 Maret hingga 15 Maret 2025. Harap mempersiapkan diri." },
+];
+
+const initialStudentAttendance = [
+    { id: 1, name: "Budi Santoso", status: "Belum Absen" },
+    { id: 2, name: "Citra Lestari", status: "Hadir" },
+    { id: 3, name: "Doni Firmansyah", status: "Sakit" },
+    { id: 4, name: "Eka Putri", status: "Hadir" },
+    { id: 5, name: "Fitriani", status: "Hadir" },
+    { id: 6, name: "Gilang Pratama", status: "Izin" },
+];
+
+const scheduleData = [
+    { time: '07:00 - 07:30', subject: 'Upacara Bendera', teacher: 'Tim Kesiswaan', start: 420, end: 450 },
+    { time: '07:30 - 09:00', subject: 'Matematika', teacher: 'Ibu Retno', start: 450, end: 540 },
+    { time: '09:00 - 10:00', subject: 'Bahasa Inggris', teacher: 'Mr. John', start: 540, end: 600 },
+    { time: '10:00 - 10:30', subject: 'Istirahat', teacher: '-', start: 600, end: 630 },
+    { time: '10:30 - 12:00', subject: 'Ilmu Pengetahuan Sosial (IPS)', teacher: 'Bapak Agus', start: 630, end: 720 },
+    { time: '12:00 - 13:00', subject: 'Istirahat & Sholat Dzuhur', teacher: '-', start: 720, end: 780 },
+    { time: '13:00 - 14:30', subject: 'Pendidikan Jasmani', teacher: 'Bapak Wawan', start: 780, end: 870 },
+];
+
+// --- REUSABLE & MEMOIZED COMPONENTS ---
+
+const InfoCard = memo(({ title, children, className }) => (
+    <div className={`bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300 ${className}`}>
+        <h3 className="text-xl font-bold text-gray-800 mb-4">{title}</h3>
+        {children}
+    </div>
+));
+
+const NavItem = memo(({ icon, label, tabName, activeTab, setActiveTab }) => (
+    <button onClick={() => setActiveTab(tabName)} className={`flex items-center space-x-3 p-3 rounded-lg w-full text-left transition-colors duration-200 ${activeTab === tabName ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}>
+        {icon}
+        <span className="hidden md:inline">{label}</span>
+    </button>
+));
+
+const StatCard = memo(({ icon, title, value, colorClass }) => (
+    <div className={`bg-white p-6 rounded-xl shadow-md flex items-center space-x-4 ${colorClass}`}>
+        <div className="text-4xl">{icon}</div>
+        <div>
+            <p className="text-sm font-medium opacity-80">{title}</p>
+            <p className="text-2xl font-bold">{value}</p>
+        </div>
+    </div>
+));
+
+
+// --- AUTHENTICATION SCREEN ---
+const AuthScreen = ({ onLogin, onRegister }) => {
+    const [isLoginView, setIsLoginView] = useState(true);
+    const [name, setName] = useState('');
+    const [password, setPassword] = useState('');
+    const [role, setRole] = useState('siswa');
+    const [error, setError] = useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setError('');
+        if (!name || !password) {
+            setError('Nama dan kata sandi tidak boleh kosong.');
+            return;
+        }
+        if (isLoginView) {
+            onLogin(name, password, (err) => setError(err));
+        } else {
+            onRegister(name, password, role, (err) => setError(err));
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4 transition-all duration-500">
+            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div className="text-center">
+                    <div className="inline-block mb-4 animate-bounce">
+                        <EduPortalLogo />
+                    </div>
+                    <h1 className="text-4xl font-bold text-blue-600">EduPortal</h1>
+                    <p className="mt-2 text-gray-600">Portal Informasi Sekolah Terpadu</p>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label htmlFor="name" className="text-sm font-medium text-gray-700">Nama</label>
+                        <input id="name" name="name" type="text" required className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Masukkan nama Anda" value={name} onChange={(e) => setName(e.target.value)} />
+                    </div>
+                    <div>
+                        <label htmlFor="password"  className="text-sm font-medium text-gray-700">Kata Sandi</label>
+                        <input id="password" name="password" type="password" required className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    </div>
+
+                    {!isLoginView && (
+                        <div>
+                            <label htmlFor="role" className="text-sm font-medium text-gray-700">Daftar sebagai</label>
+                            <select id="role" name="role" value={role} onChange={(e) => setRole(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" >
+                                <option value="siswa">Siswa</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    )}
+                    
+                    {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+
+                    <div>
+                        <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 duration-300">
+                            {isLoginView ? 'Login' : 'Daftar'}
+                        </button>
+                    </div>
+                </form>
+
+                <p className="text-center text-sm text-gray-600">
+                    {isLoginView ? 'Belum punya akun?' : 'Sudah punya akun?'}
+                    <button onClick={() => { setIsLoginView(!isLoginView); setError(''); }} className="font-medium text-blue-600 hover:text-blue-500 ml-1">
+                        {isLoginView ? 'Daftar di sini' : 'Login di sini'}
+                    </button>
+                </p>
+            </div>
+        </div>
+    );
+};
+
+// --- STUDENT DASHBOARD ---
+const StudentDashboard = ({ onLogout, announcements, attendance, onConfirmAttendance, currentUser }) => {
+    const [activeTab, setActiveTab] = useState('beranda');
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [isMounted, setIsMounted] = useState(false);
+
+    const myAttendance = attendance.find(s => s.id === currentUser.id);
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        setIsMounted(true);
+        return () => clearInterval(timer);
+    }, []);
+    
+    const getGreeting = () => {
+        const hour = currentTime.getHours();
+        if (hour < 12) return "Selamat Pagi";
+        if (hour < 15) return "Selamat Siang";
+        if (hour < 18) return "Selamat Sore";
+        return "Selamat Malam";
+    };
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'pengumuman':
+                return <InfoCard title="Pengumuman Terbaru" className="col-span-1 md:col-span-2">
+                    <div className="space-y-4">
+                        {announcements.map(a => (
+                            <div key={a.id} className="p-4 border rounded-lg bg-gray-50">
+                                <p className="font-bold text-blue-700">{a.title}</p>
+                                <p className="text-sm text-gray-500 mb-2">{a.date}</p>
+                                <p className="text-gray-700">{a.content}</p>
+                            </div>
+                        ))}
+                    </div>
+                </InfoCard>;
+            case 'jadwal':
+                 const now = currentTime.getHours() * 60 + currentTime.getMinutes();
+                 return <InfoCard title="Jadwal Pelajaran Hari Ini (Rabu)" className="col-span-1 md:col-span-2">
+                     <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                               <thead className="bg-gray-50">
+                                   <tr>
+                                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+                                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
+                                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guru</th>
+                                   </tr>
+                               </thead>
+                               <tbody className="bg-white divide-y divide-gray-200">
+                                   {scheduleData.map((item, index) => {
+                                       const isCurrent = now >= item.start && now < item.end;
+                                       return (
+                                        <tr key={index} className={isCurrent ? 'bg-green-100' : ''}>
+                                             <td className={`px-6 py-4 whitespace-nowrap font-medium ${isCurrent ? 'text-green-800' : 'text-gray-900'}`}>{item.time}</td>
+                                             <td className={`px-6 py-4 whitespace-nowrap font-semibold ${isCurrent ? 'text-green-800' : 'text-gray-900'}`}>{item.subject}</td>
+                                             <td className={`px-6 py-4 whitespace-nowrap ${isCurrent ? 'text-green-700' : 'text-gray-500'}`}>{item.teacher}</td>
+                                        </tr>
+                                       );
+                                   })}
+                               </tbody>
+                          </table>
+                       </div>
+                  </InfoCard>;
+            case 'absensi':
+                return <InfoCard title="Absensi Hari Ini" className="col-span-1 md:col-span-2">
+                    <div className="text-center">
+                        <p className="text-lg mb-4">Status Kehadiran Anda: 
+                            <span className={`font-bold ${myAttendance?.status === 'Hadir' ? 'text-green-600' : myAttendance?.status === 'Belum Absen' ? 'text-yellow-600' : 'text-red-600'}`}>
+                                {myAttendance?.status || 'Belum Terdaftar'}
+                            </span>
+                        </p>
+                        {myAttendance?.status === 'Belum Absen' ? (
+                            <button onClick={onConfirmAttendance} className="px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition-all duration-300">
+                                Konfirmasi Kehadiran Hari Ini
+                            </button>
+                        ) : myAttendance?.status === 'Hadir' ? (
+                            <p className="mt-4 text-gray-600">Terima kasih, Anda sudah melakukan absensi hari ini.</p>
+                        ) : (
+                             <p className="mt-4 text-sm text-gray-500">Status Anda telah diatur oleh admin. Hubungi wali kelas jika ada kesalahan.</p>
+                        )}
+                    </div>
+                </InfoCard>;
+            default: // Beranda
+                return (
+                    <>
+                        <InfoCard title="Profil Siswa">
+                            <div className="flex items-center space-x-4">
+                                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center"><ProfileIcon /></div>
+                                <div>
+                                    <p className="font-bold text-lg">{currentUser.name}</p>
+                                    <p className="text-gray-600">Kelas: IX A</p>
+                                    <p className="text-gray-500 text-sm">NIS: 12345{currentUser.id}</p>
+                                </div>
+                            </div>
+                        </InfoCard>
+                        {announcements.length > 0 && (
+                            <InfoCard title="Pengumuman Penting">
+                                <div className="p-3 border rounded-lg bg-yellow-50 border-yellow-200">
+                                    <p className="font-bold text-yellow-800">{announcements[0].title}</p>
+                                    <p className="text-sm text-yellow-700 mt-1">{announcements[0].content.substring(0, 50)}...</p>
+                                    <button onClick={() => setActiveTab('pengumuman')} className="text-sm font-semibold text-blue-600 mt-2 hover:underline">Baca Selengkapnya</button>
+                                </div>
+                            </InfoCard>
+                        )}
+                    </>
+                );
+        }
+    };
+
+    return (
+        <div className={`flex min-h-screen bg-gray-50 transition-opacity duration-500 ease-in-out ${isMounted ? 'opacity-100' : 'opacity-0'}`}>
+            <nav className="w-20 md:w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
+                <div>
+                    <div className="text-center mb-10">
+                        <h2 className="text-xl md:text-2xl font-bold text-blue-600">EduPortal</h2>
+                        <p className="text-sm text-gray-500 hidden md:block">Menu Siswa</p>
+                    </div>
+                    <div className="space-y-2">
+                        <NavItem icon={<HomeIcon />} label="Beranda" tabName="beranda" activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <NavItem icon={<AnnounceIcon />} label="Pengumuman" tabName="pengumuman" activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <NavItem icon={<CalendarIcon />} label="Jadwal" tabName="jadwal" activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <NavItem icon={<AttendanceIcon />} label="Absensi" tabName="absensi" activeTab={activeTab} setActiveTab={setActiveTab} />
+                    </div>
+                </div>
+                <button onClick={onLogout} className="flex items-center space-x-3 p-3 rounded-lg w-full text-left text-red-600 hover:bg-red-50 transition-colors duration-200">
+                    <LogoutIcon />
+                    <span className="hidden md:inline">Logout</span>
+                </button>
+            </nav>
+
+            <main className="flex-1 p-6 md:p-10">
+                <header className="mb-8 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-800">{getGreeting()}, {currentUser.name}!</h1>
+                        <p className="text-gray-600">Semoga harimu menyenangkan di sekolah.</p>
+                    </div>
+                    <div className="text-right bg-white p-3 rounded-lg shadow-sm">
+                        <p className="font-semibold text-blue-600">{currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                        <p className="text-sm text-gray-500">{currentTime.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                </header>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderContent()}
+                </div>
+            </main>
+        </div>
+    );
+};
+
+
+// --- ADMIN DASHBOARD ---
+const AdminDashboard = ({ onLogout, announcements, onAddAnnouncement, attendance, onAttendanceChange, currentUser }) => {
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+    
+    const handleAddAnnouncement = (e) => {
+        e.preventDefault();
+        const title = e.target.title.value;
+        const content = e.target.content.value;
+        if(title && content) {
+             onAddAnnouncement(title, content);
+             e.target.reset();
+        }
+    };
+    
+    const presentCount = attendance.filter(s => s.status === 'Hadir').length;
+
+    return (
+        <div className={`bg-gray-100 min-h-screen p-8 transition-opacity duration-500 ease-in-out ${isMounted ? 'opacity-100' : 'opacity-0'}`}>
+            <header className="flex justify-between items-center mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">Dashboard Admin</h1>
+                    <p className="text-gray-600">Selamat datang, {currentUser.name}.</p>
+                </div>
+                <button onClick={onLogout} className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                    <LogoutIcon />
+                    <span>Logout</span>
+                </button>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <StatCard icon={<UsersIcon/>} title="Total Siswa (IX A)" value={attendance.length} colorClass="text-blue-600 bg-blue-50" />
+                <StatCard icon={<ClipboardCheckIcon/>} title="Hadir Hari Ini" value={`${presentCount}/${attendance.length}`} colorClass="text-green-600 bg-green-50" />
+                <StatCard icon={<AnnounceIcon/>} title="Total Pengumuman" value={announcements.length} colorClass="text-indigo-600 bg-indigo-50" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <InfoCard title="Kelola Pengumuman">
+                    <form onSubmit={handleAddAnnouncement} className="space-y-4 mb-6">
+                        <input name="title" type="text" placeholder="Judul Pengumuman" className="w-full p-2 border rounded-lg" required />
+                        <textarea name="content" placeholder="Isi Pengumuman" className="w-full p-2 border rounded-lg h-24" required></textarea>
+                        <button type="submit" className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
+                           <AddIcon /> <span>Tambah Pengumuman</span>
+                        </button>
+                    </form>
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {announcements.map(a => (
+                            <div key={a.id} className="p-3 border rounded-md bg-gray-50">
+                                <p className="font-semibold">{a.title}</p>
+                                <p className="text-sm text-gray-600">{a.content.substring(0, 40)}...</p>
+                            </div>
+                        ))}
+                    </div>
+                </InfoCard>
+
+                <InfoCard title="Kelola Absensi Siswa - Kelas IX A">
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {attendance.map(student => (
+                            <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                <p className="font-medium">{student.name}</p>
+                                <select value={student.status} onChange={(e) => onAttendanceChange(student.id, e.target.value)} className="p-1 border rounded-md">
+                                    <option>Belum Absen</option>
+                                    <option>Hadir</option>
+                                    <option>Sakit</option>
+                                    <option>Izin</option>
+                                    <option>Alfa</option>
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+                </InfoCard>
+            </div>
+        </div>
+    );
+};
+
+// --- MAIN APP COMPONENT ---
+export default function App() {
+    const [users, setUsers] = useState([
+        { id: 0, name: 'admin', password: 'password', role: 'admin' },
+        { id: 1, name: 'Budi Santoso', password: 'password', role: 'siswa' },
+    ]);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [announcements, setAnnouncements] = useState(initialAnnouncements);
+    const [attendance, setAttendance] = useState(initialStudentAttendance);
+
+    const handleLogin = useCallback((name, password, callback) => {
+        const user = users.find(u => u.name === name && u.password === password);
+        if (user) {
+            setCurrentUser(user);
+        } else {
+            callback('Nama atau kata sandi salah.');
+        }
+    }, [users]);
+
+    const handleRegister = useCallback((name, password, role, callback) => {
+        if (users.find(u => u.name === name)) {
+            callback('Nama pengguna sudah ada.');
+            return;
+        }
+
+        const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
+        const newUser = { id: newId, name, password, role };
+        
+        setUsers(prevUsers => [...prevUsers, newUser]);
+
+        if (role === 'siswa') {
+            const newStudent = { id: newId, name, status: 'Belum Absen' };
+            setAttendance(prevAttendance => [...prevAttendance, newStudent]);
+        }
+        
+        setCurrentUser(newUser);
+    }, [users]);
+
+    const handleLogout = useCallback(() => {
+        setCurrentUser(null);
+    }, []);
+
+    const handleAddAnnouncement = useCallback((title, content) => {
+        const newAnnouncement = {
+            id: announcements.length + 1,
+            title,
+            content,
+            date: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+        };
+        setAnnouncements(prev => [newAnnouncement, ...prev]);
+    }, []);
+    
+    const handleConfirmAttendance = useCallback(() => {
+        if (!currentUser) return;
+        setAttendance(prevAttendance => 
+            prevAttendance.map(student => 
+                student.id === currentUser.id ? { ...student, status: 'Hadir' } : student
+            )
+        );
+    }, [currentUser]);
+
+    const handleAttendanceChangeByAdmin = useCallback((studentId, newStatus) => {
+        setAttendance(prevAttendance => 
+            prevAttendance.map(student => 
+                student.id === studentId ? { ...student, status: newStatus } : student
+            )
+        );
+    }, []);
+
+    if (!currentUser) {
+        return <AuthScreen onLogin={handleLogin} onRegister={handleRegister} />;
+    }
+
+    if (currentUser.role === 'siswa') {
+        return <StudentDashboard onLogout={handleLogout} announcements={announcements} attendance={attendance} onConfirmAttendance={handleConfirmAttendance} currentUser={currentUser} />;
+    }
+
+    if (currentUser.role === 'admin') {
+        return <AdminDashboard onLogout={handleLogout} announcements={announcements} onAddAnnouncement={handleAddAnnouncement} attendance={attendance} onAttendanceChange={handleAttendanceChangeByAdmin} currentUser={currentUser} />;
+    }
+    
+    return null;
+}
