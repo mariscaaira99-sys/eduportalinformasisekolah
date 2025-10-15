@@ -1,3 +1,37 @@
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut,
+    signInAnonymously,
+    signInWithCustomToken
+} from 'firebase/auth';
+import { 
+    getFirestore,
+    collection,
+    doc,
+    addDoc,
+    setDoc,
+    getDoc,
+    onSnapshot,
+    query,
+    updateDoc,
+    serverTimestamp,
+    orderBy
+} from 'firebase/firestore';
+
+
+// --- FIREBASE SETUP ---
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+
 // --- ICONS (Wrapped with React.memo for performance) ---
 const HomeIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>);
 const AnnounceIcon = memo(() => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M7 12v5h12V8l-5 5-4-4-3 3"></path></svg>);
@@ -19,21 +53,6 @@ const EduPortalLogo = memo(() => (
         <path d="M2 7v10" stroke="#1D4ED8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
 ));
-
-// --- MOCK DATA ---
-const initialAnnouncements = [
-    { id: 1, title: "Libur Awal Puasa 1446 H", date: "28 Februari 2025", content: "Diberitahukan kepada seluruh siswa bahwa kegiatan belajar mengajar akan diliburkan pada tanggal 1-2 Maret 2025 dalam rangka menyambut awal bulan suci Ramadhan." },
-    { id: 2, title: "Ujian Tengah Semester (UTS) Genap", date: "25 Februari 2025", content: "Pelaksanaan Ujian Tengah Semester Genap akan diadakan mulai tanggal 10 Maret hingga 15 Maret 2025. Harap mempersiapkan diri." },
-];
-
-const initialStudentAttendance = [
-    { id: 1, name: "Budi Santoso", status: "Belum Absen" },
-    { id: 2, name: "Citra Lestari", status: "Hadir" },
-    { id: 3, name: "Doni Firmansyah", status: "Sakit" },
-    { id: 4, name: "Eka Putri", status: "Hadir" },
-    { id: 5, name: "Fitriani", status: "Hadir" },
-    { id: 6, name: "Gilang Pratama", status: "Izin" },
-];
 
 const scheduleData = [
     { time: '07:00 - 07:30', subject: 'Upacara Bendera', teacher: 'Tim Kesiswaan', start: 420, end: 450 },
@@ -75,22 +94,34 @@ const StatCard = memo(({ icon, title, value, colorClass }) => (
 // --- AUTHENTICATION SCREEN ---
 const AuthScreen = ({ onLogin, onRegister }) => {
     const [isLoginView, setIsLoginView] = useState(true);
+    const [email, setEmail] = useState('');
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('siswa');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        if (!name || !password) {
-            setError('Nama dan kata sandi tidak boleh kosong.');
+        setLoading(true);
+
+        if (!email || !password || (!isLoginView && !name)) {
+            setError('Semua kolom wajib diisi.');
+            setLoading(false);
             return;
         }
-        if (isLoginView) {
-            onLogin(name, password, (err) => setError(err));
-        } else {
-            onRegister(name, password, role, (err) => setError(err));
+
+        try {
+            if (isLoginView) {
+                await onLogin(email, password);
+            } else {
+                await onRegister(email, password, name, role);
+            }
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -106,9 +137,15 @@ const AuthScreen = ({ onLogin, onRegister }) => {
                 </div>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {!isLoginView && (
+                        <div>
+                            <label htmlFor="name" className="text-sm font-medium text-gray-700">Nama Lengkap</label>
+                            <input id="name" name="name" type="text" required className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Masukkan nama lengkap" value={name} onChange={(e) => setName(e.target.value)} />
+                        </div>
+                    )}
                     <div>
-                        <label htmlFor="name" className="text-sm font-medium text-gray-700">Nama</label>
-                        <input id="name" name="name" type="text" required className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Masukkan nama Anda" value={name} onChange={(e) => setName(e.target.value)} />
+                        <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+                        <input id="email" name="email" type="email" required className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="contoh@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                     </div>
                     <div>
                         <label htmlFor="password"  className="text-sm font-medium text-gray-700">Kata Sandi</label>
@@ -128,8 +165,8 @@ const AuthScreen = ({ onLogin, onRegister }) => {
                     {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
                     <div>
-                        <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 duration-300">
-                            {isLoginView ? 'Login' : 'Daftar'}
+                        <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 duration-300 disabled:bg-blue-400 disabled:cursor-not-allowed">
+                            {loading ? 'Memproses...' : (isLoginView ? 'Login' : 'Daftar')}
                         </button>
                     </div>
                 </form>
@@ -151,7 +188,7 @@ const StudentDashboard = ({ onLogout, announcements, attendance, onConfirmAttend
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isMounted, setIsMounted] = useState(false);
 
-    const myAttendance = attendance.find(s => s.id === currentUser.id);
+    const myAttendance = attendance.find(s => s.id === currentUser.uid);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -175,7 +212,7 @@ const StudentDashboard = ({ onLogout, announcements, attendance, onConfirmAttend
                         {announcements.map(a => (
                             <div key={a.id} className="p-4 border rounded-lg bg-gray-50">
                                 <p className="font-bold text-blue-700">{a.title}</p>
-                                <p className="text-sm text-gray-500 mb-2">{a.date}</p>
+                                <p className="text-sm text-gray-500 mb-2">{new Date(a.createdAt?.seconds * 1000).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                 <p className="text-gray-700">{a.content}</p>
                             </div>
                         ))}
@@ -185,7 +222,7 @@ const StudentDashboard = ({ onLogout, announcements, attendance, onConfirmAttend
                  const now = currentTime.getHours() * 60 + currentTime.getMinutes();
                  return <InfoCard title="Jadwal Pelajaran Hari Ini (Rabu)" className="col-span-1 md:col-span-2">
                      <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
+                           <table className="min-w-full divide-y divide-gray-200">
                                <thead className="bg-gray-50">
                                    <tr>
                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
@@ -205,9 +242,9 @@ const StudentDashboard = ({ onLogout, announcements, attendance, onConfirmAttend
                                        );
                                    })}
                                </tbody>
-                          </table>
-                       </div>
-                  </InfoCard>;
+                           </table>
+                         </div>
+                 </InfoCard>;
             case 'absensi':
                 return <InfoCard title="Absensi Hari Ini" className="col-span-1 md:col-span-2">
                     <div className="text-center">
@@ -236,7 +273,7 @@ const StudentDashboard = ({ onLogout, announcements, attendance, onConfirmAttend
                                 <div>
                                     <p className="font-bold text-lg">{currentUser.name}</p>
                                     <p className="text-gray-600">Kelas: IX A</p>
-                                    <p className="text-gray-500 text-sm">NIS: 12345{currentUser.id}</p>
+                                    <p className="text-gray-500 text-sm">UID: {currentUser.uid.substring(0, 8)}</p>
                                 </div>
                             </div>
                         </InfoCard>
@@ -298,18 +335,29 @@ const StudentDashboard = ({ onLogout, announcements, attendance, onConfirmAttend
 // --- ADMIN DASHBOARD ---
 const AdminDashboard = ({ onLogout, announcements, onAddAnnouncement, attendance, onAttendanceChange, currentUser }) => {
     const [isMounted, setIsMounted] = useState(false);
+    const [loading, setLoading] = useState(false);
+
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
     
-    const handleAddAnnouncement = (e) => {
+    const handleAddAnnouncement = async (e) => {
         e.preventDefault();
+        setLoading(true);
         const title = e.target.title.value;
         const content = e.target.content.value;
         if(title && content) {
-             onAddAnnouncement(title, content);
-             e.target.reset();
+            try {
+                await onAddAnnouncement(title, content);
+                e.target.reset();
+            } catch (error) {
+                console.error("Error adding announcement: ", error);
+            } finally {
+                setLoading(false);
+            }
+        } else {
+           setLoading(false);
         }
     };
     
@@ -339,8 +387,8 @@ const AdminDashboard = ({ onLogout, announcements, onAddAnnouncement, attendance
                     <form onSubmit={handleAddAnnouncement} className="space-y-4 mb-6">
                         <input name="title" type="text" placeholder="Judul Pengumuman" className="w-full p-2 border rounded-lg" required />
                         <textarea name="content" placeholder="Isi Pengumuman" className="w-full p-2 border rounded-lg h-24" required></textarea>
-                        <button type="submit" className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
-                           <AddIcon /> <span>Tambah Pengumuman</span>
+                        <button type="submit" disabled={loading} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2 disabled:bg-blue-400">
+                           <AddIcon /> <span>{loading ? 'Menambahkan...' : 'Tambah Pengumuman'}</span>
                         </button>
                     </form>
                     <div className="space-y-3 max-h-60 overflow-y-auto">
@@ -376,72 +424,139 @@ const AdminDashboard = ({ onLogout, announcements, onAddAnnouncement, attendance
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
-    const [users, setUsers] = useState([
-        { id: 0, name: 'admin', password: 'password', role: 'admin' },
-        { id: 1, name: 'Budi Santoso', password: 'password', role: 'siswa' },
-    ]);
     const [currentUser, setCurrentUser] = useState(null);
-    const [announcements, setAnnouncements] = useState(initialAnnouncements);
-    const [attendance, setAttendance] = useState(initialStudentAttendance);
+    const [announcements, setAnnouncements] = useState([]);
+    const [attendance, setAttendance] = useState([]);
+    const [isAuthReady, setIsAuthReady] = useState(false);
 
-    const handleLogin = useCallback((name, password, callback) => {
-        const user = users.find(u => u.name === name && u.password === password);
-        if (user) {
-            setCurrentUser(user);
-        } else {
-            callback('Nama atau kata sandi salah.');
-        }
-    }, [users]);
+    // --- Authentication Listener ---
+    useEffect(() => {
+        const initialAuth = async () => {
+             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                // If no token, maybe we are in a dev environment or user is not logged in.
+                // You might sign in anonymously or do nothing.
+                // For this app, we wait for user login.
+            }
+        };
 
-    const handleRegister = useCallback((name, password, role, callback) => {
-        if (users.find(u => u.name === name)) {
-            callback('Nama pengguna sudah ada.');
-            return;
-        }
+        initialAuth();
 
-        const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-        const newUser = { id: newId, name, password, role };
-        
-        setUsers(prevUsers => [...prevUsers, newUser]);
-
-        if (role === 'siswa') {
-            const newStudent = { id: newId, name, status: 'Belum Absen' };
-            setAttendance(prevAttendance => [...prevAttendance, newStudent]);
-        }
-        
-        setCurrentUser(newUser);
-    }, [users]);
-
-    const handleLogout = useCallback(() => {
-        setCurrentUser(null);
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDocRef = doc(db, `/artifacts/${appId}/public/data/users`, user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    setCurrentUser({ uid: user.uid, email: user.email, ...userDocSnap.data() });
+                } else {
+                    console.log("User data not found in Firestore.");
+                    setCurrentUser(null);
+                }
+            } else {
+                setCurrentUser(null);
+            }
+            setIsAuthReady(true);
+        });
+        return () => unsubscribe();
     }, []);
 
-    const handleAddAnnouncement = useCallback((title, content) => {
-        const newAnnouncement = {
-            id: announcements.length + 1,
+    // --- Firestore Data Listeners ---
+    useEffect(() => {
+        if (!isAuthReady) return; // Wait until authentication is ready
+
+        // Listener for announcements
+        const announcementsQuery = query(collection(db, `/artifacts/${appId}/public/data/announcements`), orderBy('createdAt', 'desc'));
+        const unsubscribeAnnouncements = onSnapshot(announcementsQuery, (snapshot) => {
+            const announcementsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAnnouncements(announcementsData);
+        });
+
+        // Listener for attendance
+        const attendanceQuery = query(collection(db, `/artifacts/${appId}/public/data/attendance`));
+        const unsubscribeAttendance = onSnapshot(attendanceQuery, (snapshot) => {
+            const attendanceData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAttendance(attendanceData);
+        });
+
+        return () => {
+            unsubscribeAnnouncements();
+            unsubscribeAttendance();
+        };
+    }, [isAuthReady]);
+
+
+    // --- Authentication Handlers ---
+    const handleLogin = async (email, password) => {
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            console.error("Login error:", error.code);
+            throw new Error("Email atau kata sandi salah.");
+        }
+    };
+
+    const handleRegister = async (email, password, name, role) => {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            // Store user role and name in Firestore
+            await setDoc(doc(db, `/artifacts/${appId}/public/data/users`, user.uid), {
+                name: name,
+                role: role
+            });
+
+            // If user is a student, create an attendance record
+            if (role === 'siswa') {
+                await setDoc(doc(db, `/artifacts/${appId}/public/data/attendance`, user.uid), {
+                    name: name,
+                    status: 'Belum Absen'
+                });
+            }
+
+        } catch (error) {
+            console.error("Registration error:", error.code);
+             if (error.code === 'auth/email-already-in-use') {
+                throw new Error('Email ini sudah terdaftar.');
+            } else if (error.code === 'auth/weak-password') {
+                throw new Error('Kata sandi minimal harus 6 karakter.');
+            }
+            throw new Error("Gagal mendaftar. Silakan coba lagi.");
+        }
+    };
+
+    const handleLogout = () => {
+        signOut(auth);
+    };
+
+    // --- Data Manipulation Handlers ---
+    const handleAddAnnouncement = async (title, content) => {
+        await addDoc(collection(db, `/artifacts/${appId}/public/data/announcements`), {
             title,
             content,
-            date: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
-        };
-        setAnnouncements(prev => [newAnnouncement, ...prev]);
-    }, []);
+            createdAt: serverTimestamp()
+        });
+    };
     
-    const handleConfirmAttendance = useCallback(() => {
+    const handleConfirmAttendance = async () => {
         if (!currentUser) return;
-        setAttendance(prevAttendance => 
-            prevAttendance.map(student => 
-                student.id === currentUser.id ? { ...student, status: 'Hadir' } : student
-            )
-        );
-    }, [currentUser]);
+        const studentDocRef = doc(db, `/artifacts/${appId}/public/data/attendance`, currentUser.uid);
+        await updateDoc(studentDocRef, {
+            status: 'Hadir'
+        });
+    };
 
-    const handleAttendanceChangeByAdmin = useCallback((studentId, newStatus) => {
-        setAttendance(prevAttendance => 
-            prevAttendance.map(student => 
-                student.id === studentId ? { ...student, status: newStatus } : student
-            )
-        );
-    }, []);
+    const handleAttendanceChangeByAdmin = async (studentId, newStatus) => {
+        const studentDocRef = doc(db, `/artifacts/${appId}/public/data/attendance`, studentId);
+        await updateDoc(studentDocRef, {
+            status: newStatus
+        });
+    };
+
+    if (!isAuthReady) {
+        return <div className="flex items-center justify-center min-h-screen">Loading...</div>; // Or a proper loading spinner
+    }
 
     if (!currentUser) {
         return <AuthScreen onLogin={handleLogin} onRegister={handleRegister} />;
@@ -457,3 +572,4 @@ export default function App() {
     
     return null;
 }
+
