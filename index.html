@@ -24,13 +24,8 @@
 </head>
 <body class="bg-gray-100 font-sans">
 
-    <!-- Loading Spinner -->
-    <div id="loading-screen" class="flex items-center justify-center min-h-screen">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-    </div>
-
     <!-- Auth Screen -->
-    <div id="auth-screen" class="screen">
+    <div id="auth-screen" class="screen active">
         <div class="flex flex-col items-center justify-center min-h-screen p-4">
             <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl overflow-hidden">
                 <div class="text-center">
@@ -148,365 +143,384 @@
         </div>
     </div>
 
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, setDoc, getDoc, onSnapshot, query, updateDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- LOCAL DATABASE / STATE ---
+            let currentUser = null;
+            
+            let users = [
+                { id: 'admin01', name: 'Admin Sekolah', email: 'admin@sekolah.id', password: 'password', role: 'admin' },
+                { id: 'siswa01', name: 'Budi Santoso', email: 'budi@sekolah.id', password: 'password', role: 'siswa' },
+                { id: 'siswa02', name: 'Citra Lestari', email: 'citra@sekolah.id', password: 'password', role: 'siswa' },
+                { id: 'siswa03', name: 'Doni Firmansyah', email: 'doni@sekolah.id', password: 'password', role: 'siswa' },
+                { id: 'siswa04', name: 'Eka Putri', email: 'eka@sekolah.id', password: 'password', role: 'siswa' },
+            ];
+            
+            let announcements = [
+                 { id: 1, title: "Libur Awal Puasa 1446 H", date: "28 Februari 2025", content: "Diberitahukan kepada seluruh siswa bahwa kegiatan belajar mengajar akan diliburkan pada tanggal 1-2 Maret 2025 dalam rangka menyambut awal bulan suci Ramadhan." },
+                 { id: 2, title: "Ujian Tengah Semester (UTS) Genap", date: "25 Februari 2025", content: "Pelaksanaan Ujian Tengah Semester Genap akan diadakan mulai tanggal 10 Maret hingga 15 Maret 2025. Harap mempersiapkan diri." },
+            ];
 
-        // --- GLOBAL STATE & CONSTANTS ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            let attendance = [
+                 { id: 'siswa01', name: "Budi Santoso", status: "Belum Absen" },
+                 { id: 'siswa02', name: "Citra Lestari", status: "Hadir" },
+                 { id: 'siswa03', name: "Doni Firmansyah", status: "Sakit" },
+                 { id: 'siswa04', name: "Eka Putri", status: "Hadir" },
+            ];
 
-        let currentUser = null;
-        let announcements = [];
-        let attendance = [];
-        let isAuthReady = false;
+            // --- DOM ELEMENTS ---
+            const authScreen = document.getElementById('auth-screen');
+            const studentDashboard = document.getElementById('student-dashboard');
+            const adminDashboard = document.getElementById('admin-dashboard');
+            
+            // --- SCHEDULE DATA ---
+            const scheduleData = [
+                { time: '07:00 - 07:30', subject: 'Upacara Bendera', teacher: 'Tim Kesiswaan', start: 420, end: 450 },
+                { time: '07:30 - 09:00', subject: 'Matematika', teacher: 'Ibu Retno', start: 450, end: 540 },
+                { time: '09:00 - 10:00', subject: 'Bahasa Inggris', teacher: 'Mr. John', start: 540, end: 600 },
+                { time: '10:00 - 10:30', subject: 'Istirahat', teacher: '-', start: 600, end: 630 },
+                { time: '10:30 - 12:00', subject: 'Ilmu Pengetahuan Sosial (IPS)', teacher: 'Bapak Agus', start: 630, end: 720 },
+                { time: '12:00 - 13:00', subject: 'Istirahat & Sholat Dzuhur', teacher: '-', start: 720, end: 780 },
+                { time: '13:00 - 14:30', subject: 'Pendidikan Jasmani', teacher: 'Bapak Wawan', start: 780, end: 870 },
+            ];
 
-        // --- FIREBASE INITIALIZATION ---
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+            // --- RENDER FUNCTIONS ---
+            const renderApp = () => {
+                authScreen.classList.remove('active');
+                studentDashboard.classList.remove('flex-active');
+                adminDashboard.classList.remove('active');
 
-        // --- DOM ELEMENTS ---
-        const loadingScreen = document.getElementById('loading-screen');
-        const authScreen = document.getElementById('auth-screen');
-        const studentDashboard = document.getElementById('student-dashboard');
-        const adminDashboard = document.getElementById('admin-dashboard');
-        
-        // --- SCHEDULE DATA ---
-        const scheduleData = [
-            { time: '07:00 - 07:30', subject: 'Upacara Bendera', teacher: 'Tim Kesiswaan', start: 420, end: 450 },
-            { time: '07:30 - 09:00', subject: 'Matematika', teacher: 'Ibu Retno', start: 450, end: 540 },
-            { time: '09:00 - 10:00', subject: 'Bahasa Inggris', teacher: 'Mr. John', start: 540, end: 600 },
-            { time: '10:00 - 10:30', subject: 'Istirahat', teacher: '-', start: 600, end: 630 },
-            { time: '10:30 - 12:00', subject: 'Ilmu Pengetahuan Sosial (IPS)', teacher: 'Bapak Agus', start: 630, end: 720 },
-            { time: '12:00 - 13:00', subject: 'Istirahat & Sholat Dzuhur', teacher: '-', start: 720, end: 780 },
-            { time: '13:00 - 14:30', subject: 'Pendidikan Jasmani', teacher: 'Bapak Wawan', start: 780, end: 870 },
-        ];
-        
-        // --- RENDER FUNCTIONS ---
-        const renderApp = () => {
-            loadingScreen.style.display = 'none';
-            authScreen.classList.remove('active');
-            studentDashboard.classList.remove('flex-active');
-            adminDashboard.classList.remove('active');
+                if (!currentUser) {
+                    authScreen.classList.add('active');
+                } else if (currentUser.role === 'siswa') {
+                    renderStudentDashboard();
+                    studentDashboard.classList.add('flex-active');
+                } else if (currentUser.role === 'admin') {
+                    renderAdminDashboard();
+                    adminDashboard.classList.add('active');
+                }
+            };
 
-            if (!currentUser) {
-                authScreen.classList.add('active');
-            } else if (currentUser.role === 'siswa') {
-                renderStudentDashboard();
-                studentDashboard.classList.add('flex-active');
-            } else if (currentUser.role === 'admin') {
-                renderAdminDashboard();
-                adminDashboard.classList.add('active');
-            }
-        };
-        
-        const renderStudentDashboard = () => {
-            if (!currentUser) return;
-            // Greeting
-            document.getElementById('student-greeting').textContent = `Selamat Pagi, ${currentUser.name}!`;
-            // Render content for the default tab
-            renderStudentContent('beranda');
-        };
-        
-        const renderAdminDashboard = () => {
-            if (!currentUser) return;
-            document.getElementById('admin-greeting').textContent = `Selamat datang, ${currentUser.name}.`;
-            renderAdminStats();
-            renderAdminAnnouncements();
-            renderAdminAttendance();
-        };
+            const getGreeting = () => {
+                const hour = new Date().getHours();
+                if (hour < 12) return "Selamat Pagi";
+                if (hour < 15) return "Selamat Siang";
+                if (hour < 18) return "Selamat Sore";
+                return "Selamat Malam";
+            };
+            
+            const renderStudentDashboard = () => {
+                if (!currentUser) return;
+                document.getElementById('student-greeting').textContent = `${getGreeting()}, ${currentUser.name}!`;
+                renderStudentContent('beranda');
+                // Set the default tab as active visually
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('bg-blue-100', 'text-blue-700', 'font-semibold');
+                    item.classList.add('text-gray-600', 'hover:bg-gray-100');
+                });
+                document.querySelector('.nav-item[data-tab="beranda"]').classList.add('bg-blue-100', 'text-blue-700', 'font-semibold');
+            };
+            
+            const renderAdminDashboard = () => {
+                if (!currentUser) return;
+                document.getElementById('admin-greeting').textContent = `Selamat datang, ${currentUser.name}.`;
+                renderAdminStats();
+                renderAdminAnnouncements();
+                renderAdminAttendance();
+            };
 
-        const renderStudentContent = (tabName) => {
-             const contentArea = document.getElementById('student-content-area');
-             const myAttendance = attendance.find(s => s.id === currentUser.uid);
+            const renderStudentContent = (tabName) => {
+                 const contentArea = document.getElementById('student-content-area');
+                 const myAttendance = attendance.find(s => s.id === currentUser.id);
 
-             switch (tabName) {
-                case 'pengumuman':
-                    contentArea.innerHTML = `
-                        <div class="bg-white rounded-xl shadow-md p-6 col-span-1 md:col-span-2">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Pengumuman Terbaru</h3>
-                            <div class="space-y-4">
-                                ${announcements.map(a => `
-                                    <div class="p-4 border rounded-lg bg-gray-50">
-                                        <p class="font-bold text-blue-700">${a.title}</p>
-                                        <p class="text-sm text-gray-500 mb-2">${new Date(a.createdAt?.seconds * 1000).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                                        <p class="text-gray-700">${a.content}</p>
+                 switch (tabName) {
+                    case 'pengumuman':
+                        contentArea.innerHTML = `
+                            <div class="bg-white rounded-xl shadow-md p-6 col-span-1 md:col-span-2">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Pengumuman Terbaru</h3>
+                                <div class="space-y-4">
+                                    ${announcements.slice().reverse().map(a => `
+                                        <div class="p-4 border rounded-lg bg-gray-50">
+                                            <p class="font-bold text-blue-700">${a.title}</p>
+                                            <p class="text-sm text-gray-500 mb-2">${a.date}</p>
+                                            <p class="text-gray-700">${a.content}</p>
+                                        </div>
+                                    `).join('') || '<p>Tidak ada pengumuman.</p>'}
+                                </div>
+                            </div>`;
+                        break;
+                    case 'jadwal':
+                        const now = new Date();
+                        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                        contentArea.innerHTML = `
+                            <div class="bg-white rounded-xl shadow-md p-6 col-span-1 md:col-span-2">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Jadwal Pelajaran Hari Ini (Rabu)</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guru</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            ${scheduleData.map(item => {
+                                                const isCurrent = nowMinutes >= item.start && nowMinutes < item.end;
+                                                return `
+                                                    <tr class="${isCurrent ? 'bg-green-100' : ''}">
+                                                        <td class="px-6 py-4 whitespace-nowrap font-medium ${isCurrent ? 'text-green-800' : 'text-gray-900'}">${item.time}</td>
+                                                        <td class="px-6 py-4 whitespace-nowrap font-semibold ${isCurrent ? 'text-green-800' : 'text-gray-900'}">${item.subject}</td>
+                                                        <td class="px-6 py-4 whitespace-nowrap ${isCurrent ? 'text-green-700' : 'text-gray-500'}">${item.teacher}</td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>`;
+                        break;
+                     case 'absensi':
+                        let attendanceHTML = '';
+                        if (myAttendance?.status === 'Belum Absen') {
+                            attendanceHTML = `<button id="confirm-attendance-btn" class="px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition-all duration-300">Konfirmasi Kehadiran Hari Ini</button>`;
+                        } else if (myAttendance?.status === 'Hadir') {
+                            attendanceHTML = `<p class="mt-4 text-gray-600">Terima kasih, Anda sudah melakukan absensi hari ini.</p>`;
+                        } else {
+                            attendanceHTML = `<p class="mt-4 text-sm text-gray-500">Status Anda (${myAttendance?.status}) telah diatur oleh admin. Hubungi wali kelas jika ada kesalahan.</p>`;
+                        }
+                        contentArea.innerHTML = `
+                            <div class="bg-white rounded-xl shadow-md p-6 col-span-1 md:col-span-2">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Absensi Hari Ini</h3>
+                                <div class="text-center">
+                                    <p class="text-lg mb-4">Status Kehadiran Anda: 
+                                        <span class="font-bold ${myAttendance?.status === 'Hadir' ? 'text-green-600' : myAttendance?.status === 'Belum Absen' ? 'text-yellow-600' : 'text-red-600'}">
+                                            ${myAttendance?.status || 'Belum Terdaftar'}
+                                        </span>
+                                    </p>
+                                    ${attendanceHTML}
+                                </div>
+                            </div>`;
+                        if (myAttendance?.status === 'Belum Absen') {
+                            document.getElementById('confirm-attendance-btn').addEventListener('click', handleConfirmAttendance);
+                        }
+                        break;
+                    case 'beranda':
+                    default:
+                         const latestAnnouncement = announcements[announcements.length - 1];
+                         contentArea.innerHTML = `
+                            <div class="bg-white rounded-xl shadow-md p-6">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Profil Siswa</h3>
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+                                    <div>
+                                        <p class="font-bold text-lg">${currentUser.name}</p>
+                                        <p class="text-gray-600">Kelas: IX A</p>
+                                        <p class="text-gray-500 text-sm">ID: ${currentUser.id.substring(0, 8)}</p>
                                     </div>
-                                `).join('') || '<p>Tidak ada pengumuman.</p>'}
-                            </div>
-                        </div>`;
-                    break;
-                case 'jadwal':
-                    const now = new Date();
-                    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-                    contentArea.innerHTML = `
-                        <div class="bg-white rounded-xl shadow-md p-6 col-span-1 md:col-span-2">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Jadwal Pelajaran Hari Ini (Rabu)</h3>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guru</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        ${scheduleData.map(item => {
-                                            const isCurrent = nowMinutes >= item.start && nowMinutes < item.end;
-                                            return `
-                                                <tr class="${isCurrent ? 'bg-green-100' : ''}">
-                                                    <td class="px-6 py-4 whitespace-nowrap font-medium ${isCurrent ? 'text-green-800' : 'text-gray-900'}">${item.time}</td>
-                                                    <td class="px-6 py-4 whitespace-nowrap font-semibold ${isCurrent ? 'text-green-800' : 'text-gray-900'}">${item.subject}</td>
-                                                    <td class="px-6 py-4 whitespace-nowrap ${isCurrent ? 'text-green-700' : 'text-gray-500'}">${item.teacher}</td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>`;
-                    break;
-                 case 'absensi':
-                    let attendanceHTML = '';
-                    if (myAttendance?.status === 'Belum Absen') {
-                        attendanceHTML = `<button id="confirm-attendance-btn" class="px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition-all duration-300">Konfirmasi Kehadiran Hari Ini</button>`;
-                    } else if (myAttendance?.status === 'Hadir') {
-                        attendanceHTML = `<p class="mt-4 text-gray-600">Terima kasih, Anda sudah melakukan absensi hari ini.</p>`;
-                    } else {
-                        attendanceHTML = `<p class="mt-4 text-sm text-gray-500">Status Anda telah diatur oleh admin. Hubungi wali kelas jika ada kesalahan.</p>`;
-                    }
-                    contentArea.innerHTML = `
-                        <div class="bg-white rounded-xl shadow-md p-6 col-span-1 md:col-span-2">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Absensi Hari Ini</h3>
-                            <div class="text-center">
-                                <p class="text-lg mb-4">Status Kehadiran Anda: 
-                                    <span class="font-bold ${myAttendance?.status === 'Hadir' ? 'text-green-600' : myAttendance?.status === 'Belum Absen' ? 'text-yellow-600' : 'text-red-600'}">
-                                        ${myAttendance?.status || 'Belum Terdaftar'}
-                                    </span>
-                                </p>
-                                ${attendanceHTML}
-                            </div>
-                        </div>`;
-                    if (myAttendance?.status === 'Belum Absen') {
-                        document.getElementById('confirm-attendance-btn').addEventListener('click', handleConfirmAttendance);
-                    }
-                    break;
-                case 'beranda':
-                default:
-                     contentArea.innerHTML = `
-                        <div class="bg-white rounded-xl shadow-md p-6">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Profil Siswa</h3>
-                            <div class="flex items-center space-x-4">
-                                <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
-                                <div>
-                                    <p class="font-bold text-lg">${currentUser.name}</p>
-                                    <p class="text-gray-600">Kelas: IX A</p>
-                                    <p class="text-gray-500 text-sm">UID: ${currentUser.uid.substring(0, 8)}</p>
                                 </div>
                             </div>
-                        </div>
-                        ${announcements.length > 0 ? `
-                        <div class="bg-white rounded-xl shadow-md p-6">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Pengumuman Penting</h3>
-                            <div class="p-3 border rounded-lg bg-yellow-50 border-yellow-200">
-                                <p class="font-bold text-yellow-800">${announcements[0].title}</p>
-                                <p class="text-sm text-yellow-700 mt-1">${announcements[0].content.substring(0, 50)}...</p>
-                                <button data-tab="pengumuman" class="nav-switch-btn text-sm font-semibold text-blue-600 mt-2 hover:underline">Baca Selengkapnya</button>
+                            ${latestAnnouncement ? `
+                            <div class="bg-white rounded-xl shadow-md p-6">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Pengumuman Penting</h3>
+                                <div class="p-3 border rounded-lg bg-yellow-50 border-yellow-200">
+                                    <p class="font-bold text-yellow-800">${latestAnnouncement.title}</p>
+                                    <p class="text-sm text-yellow-700 mt-1">${latestAnnouncement.content.substring(0, 50)}...</p>
+                                    <button data-tab="pengumuman" class="nav-switch-btn text-sm font-semibold text-blue-600 mt-2 hover:underline">Baca Selengkapnya</button>
+                                </div>
                             </div>
-                        </div>
-                        ` : ''}
-                    `;
-                    break;
-             }
-        };
-
-        const renderAdminStats = () => {
-            const presentCount = attendance.filter(s => s.status === 'Hadir').length;
-            document.getElementById('admin-stat-total-siswa').innerHTML = `<div class="text-4xl"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><p class="text-sm font-medium opacity-80">Total Siswa (IX A)</p><p class="text-2xl font-bold">${attendance.length}</p></div>`;
-            document.getElementById('admin-stat-hadir').innerHTML = `<div class="text-4xl"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg></div><div><p class="text-sm font-medium opacity-80">Hadir Hari Ini</p><p class="text-2xl font-bold">${presentCount}/${attendance.length}</p></div>`;
-            document.getElementById('admin-stat-pengumuman').innerHTML = `<div class="text-4xl"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 12v5h12V8l-5 5-4-4-3 3"></path></svg></div><div><p class="text-sm font-medium opacity-80">Total Pengumuman</p><p class="text-2xl font-bold">${announcements.length}</p></div>`;
-        };
-        
-        const renderAdminAnnouncements = () => {
-             document.getElementById('admin-announcement-list').innerHTML = announcements.map(a => `
-                <div class="p-3 border rounded-md bg-gray-50">
-                    <p class="font-semibold">${a.title}</p>
-                    <p class="text-sm text-gray-600">${a.content.substring(0, 40)}...</p>
-                </div>
-            `).join('');
-        };
-
-        const renderAdminAttendance = () => {
-            document.getElementById('admin-attendance-list').innerHTML = attendance.map(student => `
-                <div class="flex items-center justify-between p-3 border rounded-lg">
-                    <p class="font-medium">${student.name}</p>
-                    <select data-studentid="${student.id}" class="admin-attendance-select p-1 border rounded-md">
-                        <option ${student.status === 'Belum Absen' ? 'selected' : ''}>Belum Absen</option>
-                        <option ${student.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
-                        <option ${student.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
-                        <option ${student.status === 'Izin' ? 'selected' : ''}>Izin</option>
-                        <option ${student.status === 'Alfa' ? 'selected' : ''}>Alfa</option>
-                    </select>
-                </div>
-            `).join('');
-            document.querySelectorAll('.admin-attendance-select').forEach(select => {
-                select.addEventListener('change', (e) => handleAttendanceChangeByAdmin(e.target.dataset.studentid, e.target.value));
-            });
-        };
-
-        // --- HANDLER FUNCTIONS ---
-        const handleLogin = async (email, password) => {
-            await signInWithEmailAndPassword(auth, email, password);
-        };
-        
-        const handleRegister = async (email, password, name, role) => {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            await setDoc(doc(db, `/artifacts/${appId}/public/data/users`, user.uid), { name, role });
-            if (role === 'siswa') {
-                await setDoc(doc(db, `/artifacts/${appId}/public/data/attendance`, user.uid), { name, status: 'Belum Absen' });
-            }
-        };
-
-        const handleLogout = () => signOut(auth);
-        
-        const handleAddAnnouncement = async (title, content) => {
-            await addDoc(collection(db, `/artifacts/${appId}/public/data/announcements`), { title, content, createdAt: serverTimestamp() });
-        };
-        
-        const handleConfirmAttendance = async () => {
-            if (!currentUser) return;
-            const studentDocRef = doc(db, `/artifacts/${appId}/public/data/attendance`, currentUser.uid);
-            await updateDoc(studentDocRef, { status: 'Hadir' });
-        };
-
-        const handleAttendanceChangeByAdmin = async (studentId, newStatus) => {
-            const studentDocRef = doc(db, `/artifacts/${appId}/public/data/attendance`, studentId);
-            await updateDoc(studentDocRef, { status: newStatus });
-        };
-
-        // --- EVENT LISTENERS ---
-        document.getElementById('auth-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = e.target.email.value;
-            const password = e.target.password.value;
-            const name = e.target.name.value;
-            const role = e.target.role.value;
-            const isLoginView = !document.getElementById('name-field-container').style.display.includes('block');
+                            ` : ''}
+                        `;
+                        break;
+                 }
+            };
             
-            const submitButton = document.getElementById('auth-submit-button');
-            const errorP = document.getElementById('auth-error');
-            errorP.textContent = '';
-            submitButton.disabled = true;
-            submitButton.textContent = 'Memproses...';
-
-            try {
-                if (isLoginView) {
-                    await handleLogin(email, password);
-                } else {
-                    await handleRegister(email, password, name, role);
-                }
-            } catch (error) {
-                 errorP.textContent = "Gagal. Periksa kembali email dan kata sandi Anda.";
-                 console.error(error);
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = isLoginView ? 'Login' : 'Daftar';
-            }
-        });
-        
-        document.getElementById('auth-toggle-button').addEventListener('click', () => {
-            const nameField = document.getElementById('name-field-container');
-            const roleField = document.getElementById('role-field-container');
-            const isLoginView = nameField.style.display === 'none';
+            const renderAdminStats = () => {
+                const presentCount = attendance.filter(s => s.status === 'Hadir').length;
+                document.getElementById('admin-stat-total-siswa').innerHTML = `<div class="text-4xl"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><p class="text-sm font-medium opacity-80">Total Siswa (IX A)</p><p class="text-2xl font-bold">${attendance.length}</p></div>`;
+                document.getElementById('admin-stat-hadir').innerHTML = `<div class="text-4xl"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg></div><div><p class="text-sm font-medium opacity-80">Hadir Hari Ini</p><p class="text-2xl font-bold">${presentCount}/${attendance.length}</p></div>`;
+                document.getElementById('admin-stat-pengumuman').innerHTML = `<div class="text-4xl"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 12v5h12V8l-5 5-4-4-3 3"></path></svg></div><div><p class="text-sm font-medium opacity-80">Total Pengumuman</p><p class="text-2xl font-bold">${announcements.length}</p></div>`;
+            };
             
-            if (isLoginView) { // Switch to Register view
-                nameField.style.display = 'block';
-                roleField.style.display = 'block';
-                document.getElementById('auth-submit-button').textContent = 'Daftar';
-                document.getElementById('auth-toggle-text').textContent = 'Sudah punya akun?';
-                document.getElementById('auth-toggle-button').textContent = 'Login di sini';
-            } else { // Switch to Login view
-                nameField.style.display = 'none';
-                roleField.style.display = 'none';
-                document.getElementById('auth-submit-button').textContent = 'Login';
-                document.getElementById('auth-toggle-text').textContent = 'Belum punya akun?';
-                document.getElementById('auth-toggle-button').textContent = 'Daftar di sini';
-            }
-        });
-        
-        document.getElementById('student-logout-button').addEventListener('click', handleLogout);
-        document.getElementById('admin-logout-button').addEventListener('click', handleLogout);
-        
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                document.querySelectorAll('.nav-item').forEach(i => {
-                    i.classList.remove('bg-blue-100', 'text-blue-700', 'font-semibold');
-                    i.classList.add('text-gray-600', 'hover:bg-gray-100');
+            const renderAdminAnnouncements = () => {
+                 document.getElementById('admin-announcement-list').innerHTML = announcements.slice().reverse().map(a => `
+                    <div class="p-3 border rounded-md bg-gray-50">
+                        <p class="font-semibold">${a.title}</p>
+                        <p class="text-sm text-gray-600">${a.content.substring(0, 40)}...</p>
+                    </div>
+                `).join('');
+            };
+
+            const renderAdminAttendance = () => {
+                document.getElementById('admin-attendance-list').innerHTML = attendance.map(student => `
+                    <div class="flex items-center justify-between p-3 border rounded-lg">
+                        <p class="font-medium">${student.name}</p>
+                        <select data-studentid="${student.id}" class="admin-attendance-select p-1 border rounded-md">
+                            <option ${student.status === 'Belum Absen' ? 'selected' : ''}>Belum Absen</option>
+                            <option ${student.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
+                            <option ${student.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
+                            <option ${student.status === 'Izin' ? 'selected' : ''}>Izin</option>
+                            <option ${student.status === 'Alfa' ? 'selected' : ''}>Alfa</option>
+                        </select>
+                    </div>
+                `).join('');
+                document.querySelectorAll('.admin-attendance-select').forEach(select => {
+                    select.addEventListener('change', (e) => handleAttendanceChangeByAdmin(e.target.dataset.studentid, e.target.value));
                 });
-                const btn = e.currentTarget;
-                btn.classList.add('bg-blue-100', 'text-blue-700', 'font-semibold');
-                btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
-                renderStudentContent(btn.dataset.tab);
-            });
-        });
-        
-         document.getElementById('student-content-area').addEventListener('click', e => {
-            if (e.target && e.target.classList.contains('nav-switch-btn')) {
-                const tab = e.target.dataset.tab;
-                document.querySelector(`.nav-item[data-tab="${tab}"]`).click();
-            }
-        });
-        
-        document.getElementById('add-announcement-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const btnText = document.getElementById('add-announcement-btn-text');
-            btn.disabled = true;
-            btnText.textContent = 'Menambahkan...';
-            try {
-                await handleAddAnnouncement(e.target.title.value, e.target.content.value);
-                e.target.reset();
-            } catch (error) {
-                console.error("Error adding announcement: ", error);
-            } finally {
-                btn.disabled = false;
-                btnText.textContent = 'Tambah Pengumuman';
-            }
-        });
+            };
 
-        // --- APP INITIALIZATION ---
-        const initializeAppLogic = async () => {
-             // Auth Listener
-            onAuthStateChanged(auth, async (user) => {
+            // --- HANDLER FUNCTIONS ---
+            const handleLogin = (email, password) => {
+                const user = users.find(u => u.email === email && u.password === password);
                 if (user) {
-                    const userDocSnap = await getDoc(doc(db, `/artifacts/${appId}/public/data/users`, user.uid));
-                    if (userDocSnap.exists()) {
-                        currentUser = { uid: user.uid, email: user.email, ...userDocSnap.data() };
-                    } else {
-                        currentUser = null;
-                    }
-                } else {
-                    currentUser = null;
+                    currentUser = user;
+                    renderApp();
+                    return true;
                 }
-                isAuthReady = true;
+                return false;
+            };
+            
+            const handleRegister = (email, password, name, role) => {
+                if (users.some(u => u.email === email)) {
+                    return { success: false, message: 'Email sudah terdaftar.' };
+                }
+                const newId = role + (users.filter(u=>u.role === role).length + 1).toString().padStart(2, '0');
+                const newUser = { id: newId, name, email, password, role };
+                users.push(newUser);
+                if (role === 'siswa') {
+                    attendance.push({ id: newId, name, status: 'Belum Absen' });
+                }
+                currentUser = newUser;
                 renderApp();
-            });
+                return { success: true };
+            };
 
-            // Firestore Listeners
-            onSnapshot(query(collection(db, `/artifacts/${appId}/public/data/announcements`), orderBy('createdAt', 'desc')), (snapshot) => {
-                announcements = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (currentUser) renderApp();
-            });
-            onSnapshot(query(collection(db, `/artifacts/${appId}/public/data/attendance`)), (snapshot) => {
-                attendance = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (currentUser) renderApp();
+            const handleLogout = () => {
+                currentUser = null;
+                renderApp();
+            };
+            
+            const handleAddAnnouncement = (title, content) => {
+                const newAnnouncement = {
+                    id: announcements.length + 1,
+                    title,
+                    content,
+                    date: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+                };
+                announcements.push(newAnnouncement);
+                renderAdminAnnouncements(); // Re-render only the affected parts
+                renderAdminStats();
+            };
+            
+            const handleConfirmAttendance = () => {
+                if (!currentUser) return;
+                const studentIndex = attendance.findIndex(s => s.id === currentUser.id);
+                if (studentIndex !== -1) {
+                    attendance[studentIndex].status = 'Hadir';
+                    renderStudentContent('absensi'); // Re-render the tab content
+                }
+            };
+
+            const handleAttendanceChangeByAdmin = (studentId, newStatus) => {
+                const studentIndex = attendance.findIndex(s => s.id === studentId);
+                if (studentIndex !== -1) {
+                    attendance[studentIndex].status = newStatus;
+                    renderAdminStats(); // Re-render stats
+                }
+            };
+            
+            // --- EVENT LISTENERS ---
+            document.getElementById('auth-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = e.target.email.value;
+                const password = e.target.password.value;
+                const name = e.target.name.value;
+                const role = e.target.role.value;
+                const isLoginView = !document.getElementById('name-field-container').style.display.includes('block');
+                
+                const submitButton = document.getElementById('auth-submit-button');
+                const errorP = document.getElementById('auth-error');
+                errorP.textContent = '';
+                submitButton.disabled = true;
+                submitButton.textContent = 'Memproses...';
+
+                setTimeout(() => { // Simulate network delay
+                    let result;
+                    if (isLoginView) {
+                        result = handleLogin(email, password);
+                        if (!result) {
+                            errorP.textContent = "Email atau kata sandi salah.";
+                        }
+                    } else {
+                        result = handleRegister(email, password, name, role);
+                        if (!result.success) {
+                             errorP.textContent = result.message;
+                        }
+                    }
+                    submitButton.disabled = false;
+                    submitButton.textContent = isLoginView ? 'Login' : 'Daftar';
+                }, 500);
             });
             
+            document.getElementById('auth-toggle-button').addEventListener('click', () => {
+                const nameField = document.getElementById('name-field-container');
+                const roleField = document.getElementById('role-field-container');
+                const isLoginView = nameField.style.display === 'none';
+                
+                if (isLoginView) { // Switch to Register view
+                    nameField.style.display = 'block';
+                    roleField.style.display = 'block';
+                    document.getElementById('auth-submit-button').textContent = 'Daftar';
+                    document.getElementById('auth-toggle-text').textContent = 'Sudah punya akun?';
+                    document.getElementById('auth-toggle-button').textContent = 'Login di sini';
+                } else { // Switch to Login view
+                    nameField.style.display = 'none';
+                    roleField.style.display = 'none';
+                    document.getElementById('auth-submit-button').textContent = 'Login';
+                    document.getElementById('auth-toggle-text').textContent = 'Belum punya akun?';
+                    document.getElementById('auth-toggle-button').textContent = 'Daftar di sini';
+                }
+            });
+            
+            document.getElementById('student-logout-button').addEventListener('click', handleLogout);
+            document.getElementById('admin-logout-button').addEventListener('click', handleLogout);
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    document.querySelectorAll('.nav-item').forEach(i => {
+                        i.classList.remove('bg-blue-100', 'text-blue-700', 'font-semibold');
+                        i.classList.add('text-gray-600', 'hover:bg-gray-100');
+                    });
+                    const btn = e.currentTarget;
+                    btn.classList.add('bg-blue-100', 'text-blue-700', 'font-semibold');
+                    btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                    renderStudentContent(btn.dataset.tab);
+                });
+            });
+            
+             document.getElementById('student-content-area').addEventListener('click', e => {
+                if (e.target && e.target.classList.contains('nav-switch-btn')) {
+                    const tab = e.target.dataset.tab;
+                    document.querySelector(`.nav-item[data-tab="${tab}"]`).click();
+                }
+            });
+            
+            document.getElementById('add-announcement-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button');
+                const btnText = document.getElementById('add-announcement-btn-text');
+                btn.disabled = true;
+                btnText.textContent = 'Menambahkan...';
+                
+                setTimeout(() => { // Simulate network delay
+                    handleAddAnnouncement(e.target.title.value, e.target.content.value);
+                    e.target.reset();
+                    btn.disabled = false;
+                    btnText.textContent = 'Tambah Pengumuman';
+                }, 500);
+            });
+            
+            // --- APP INITIALIZATION ---
             // Clock
             setInterval(() => {
                 const now = new Date();
@@ -518,15 +532,10 @@
             document.getElementById('logo-container').innerHTML = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#3B82F6"/><path d="M2 17l10 5 10-5" stroke="#3B82F6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12l10 5 10-5" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 7v10" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 7v10" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
             document.getElementById('logo-container').classList.add('animate-bounce');
 
-
-            // Initial Auth
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            }
-        };
-
-        initializeAppLogic();
-
+            // Hide loading spinner and show auth screen
+            document.getElementById('loading-screen')?.remove();
+        });
     </script>
 </body>
 </html>
+
